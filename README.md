@@ -82,8 +82,13 @@ AI Agent 工作台是一个 Python + Tkinter 桌面应用，统一管理本地�
 ```
 service_workbench/
 ├── AI agent管理工作台.bat     # 便携启动器 / 配置向导
-├── service_manager.py          # 主程序（Tkinter GUI）
+├── service_manager.py          # 启动入口（薄封装，bat 仍启动它）
+├── workbench/                  # 分层实现
+│   ├── core.py                 # headless 核心逻辑（配置/进程/代理/Node/日志/状态，无 GUI 依赖）
+│   ├── platform_windows.py     # Windows 平台特定能力（注册表系统代理）
+│   └── app.py                  # Tkinter 图形界面（WorkbenchApp + main）
 ├── requirements.txt            # 可选 Python 依赖
+├── AIWorkbench.spec            # PyInstaller 打包配置（构建单文件 exe）
 ├── workbench2.cfg.example      # 启动器配置模板
 ├── workbench_settings.json.example  # UI 运行时配置模板
 ├── LICENSE                     # MIT
@@ -94,6 +99,29 @@ service_workbench/
 ├── .gitattributes              # 强制 .bat CRLF / 其他 LF
 └── .github/workflows/lint.yml  # CI：多 Python 版本编译检查
 ```
+
+分层依赖单向无环：`app → core → platform_windows`。`core.py` 不依赖
+Tkinter，可被命令行、自动化测试或未来的其他界面复用。
+
+### 从源码运行
+
+```bash
+pip install -r requirements.txt   # 仅托盘/资源监控需要，核心功能零第三方依赖
+python service_manager.py         # 或双击 AI agent管理工作台.bat
+```
+
+### 构建免安装 exe（可选）
+
+不想让最终用户安装 Python 时，可用 PyInstaller 打成单文件：
+
+```bash
+pip install pyinstaller psutil pystray Pillow
+pyinstaller AIWorkbench.spec --noconfirm --clean
+# 产物：dist/AIWorkbench.exe（约 21 MB，双击即运行）
+```
+
+把 `AIWorkbench.exe` 单独拷到任意目录即可运行；`workbench2.cfg`、
+`workbench_settings.json` 与 `logs/` 会就近生成在 exe 所在目录，便于便携迁移。
 
 ### 贡献
 
@@ -172,6 +200,33 @@ service_workbench/
 
 > ⚠ Both runtime configs contain personal paths and are listed in `.gitignore` — your local copy is never committed.
 > See [`workbench2.cfg.example`](workbench2.cfg.example) / [`workbench_settings.json.example`](workbench_settings.json.example) for templates.
+
+### Architecture
+
+The codebase is split into one-way layers (`app → core → platform_windows`):
+
+```
+service_manager.py            # thin entry point (the bat still launches this)
+workbench/
+├── core.py                   # headless logic: config / processes / proxy / Node / logging / state
+├── platform_windows.py       # Windows-specific code (registry system proxy)
+└── app.py                    # Tkinter GUI (WorkbenchApp + main)
+```
+
+`core.py` has no Tkinter dependency and can be reused by a CLI, tests, or a future UI.
+
+### Building a standalone exe
+
+To ship without requiring Python on the target machine:
+
+```bash
+pip install pyinstaller psutil pystray Pillow
+pyinstaller AIWorkbench.spec --noconfirm --clean
+# output: dist/AIWorkbench.exe (~21 MB), double-click to run
+```
+
+You can copy `AIWorkbench.exe` anywhere on its own; `workbench2.cfg`,
+`workbench_settings.json`, and `logs/` are created next to the exe.
 
 ### Contributing
 

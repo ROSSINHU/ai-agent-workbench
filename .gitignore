@@ -26,6 +26,10 @@ _test_*.py
 _win32_debug.py
 _probe_*.py
 
+# Refactor safety backup (local only; pre-split monolith)
+service_manager_orig_backup.py
+*_orig_backup.py
+
 # Portable build artifacts
 *.zip
 service_workbench-portable-*/
@@ -40,6 +44,9 @@ build/
 *.pem
 *.key
 *.pfx
+
+# WorkBuddy local workspace data (artifacts, memory — never commit)
+.workbuddy/
 
 # IDE / editor
 .vscode/

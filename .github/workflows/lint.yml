@@ -22,12 +22,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Compile service_manager.py
-        run: python -m py_compile service_manager.py
+      - name: Byte-compile entry point and workbench package
+        run: python -m compileall -q service_manager.py workbench
 
-      - name: AST parse + bytecode dump
+      - name: AST parse all sources
         run: |
-          python -c "import ast; ast.parse(open('service_manager.py', encoding='utf-8').read()); print('AST OK')"
+          python -c "import ast,pathlib; fs=[pathlib.Path('service_manager.py'),*pathlib.Path('workbench').rglob('*.py')]; [ast.parse(p.read_text(encoding='utf-8'),filename=str(p)) for p in fs]; print('AST OK:', len(fs), 'files')"
 
   bat-line-endings:
     name: .bat files are CRLF
