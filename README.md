@@ -5,7 +5,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](#%E7%B3%BB%E7%BB%9F%E8%A6%81%E6%B1%82)
-[![Platform](https://img.shields.io/badge/platform-Windows%207%2F8%2F10%2F11-lightgrey.svg)](#%E7%B3%BB%E7%BB%9F%E8%A6%81%E6%B1%82)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)](#%E7%B3%BB%E7%BB%9F%E8%A6%81%E6%B1%82)
 [![CI](https://github.com/ROSSINHU/ai-agent-workbench/actions/workflows/lint.yml/badge.svg)](../../actions)
 
 [English](#english) | [中文](#中文)
@@ -39,6 +39,12 @@ AI Agent 工作台是一个 Python + Tkinter 桌面应用，统一管理本地�
 - **磁盘空间**：约 200 MB（含可选依赖）
 
 ### 安装
+
+**方式一：免安装 exe（普通用户推荐，无需 Python）**
+
+到 [Releases](https://github.com/ROSSINHU/ai-agent-workbench/releases) 下载最新的 `AIWorkbench.exe`，双击即可运行。它是单文件便携程序：`workbench2.cfg`、`workbench_settings.json` 与 `logs/` 会就近生成在 exe 所在目录，拷贝整个文件夹即可迁移。
+
+**方式二：从源码运行（开发者）**
 
 1. **克隆仓库**：
    ```bash
@@ -83,7 +89,8 @@ AI Agent 工作台是一个 Python + Tkinter 桌面应用，统一管理本地�
 service_workbench/
 ├── AI agent管理工作台.bat     # 便携启动器 / 配置向导
 ├── service_manager.py          # 启动入口（薄封装，bat 仍启动它）
-├── workbench/                  # 分层实现
+├── workbench/                  # 分层实现（Python 包）
+│   ├── __init__.py             # 包标识
 │   ├── core.py                 # headless 核心逻辑（配置/进程/代理/Node/日志/状态，无 GUI 依赖）
 │   ├── platform_windows.py     # Windows 平台特定能力（注册表系统代理）
 │   └── app.py                  # Tkinter 图形界面（WorkbenchApp + main）
@@ -119,6 +126,9 @@ pip install pyinstaller psutil pystray Pillow
 pyinstaller AIWorkbench.spec --noconfirm --clean
 # 产物：dist/AIWorkbench.exe（约 21 MB，双击即运行）
 ```
+
+> 注意：打包用的 Python 必须**自带 tkinter**（python.org 官方安装器默认包含；部分精简版/conda 环境可能缺失，需 `conda install tk`）。否则打的包启动即失败。
+> 若从 PyPI 安装 PyInstaller 很慢，可按需使用官方源或代理。
 
 把 `AIWorkbench.exe` 单独拷到任意目录即可运行；`workbench2.cfg`、
 `workbench_settings.json` 与 `logs/` 会就近生成在 exe 所在目录，便于便携迁移。
@@ -164,6 +174,12 @@ pyinstaller AIWorkbench.spec --noconfirm --clean
 - **Disk**: ~200 MB (with optional deps)
 
 ### Install
+
+**Option A — Standalone exe (recommended for users, no Python needed)**
+
+Download the latest `AIWorkbench.exe` from the [Releases](https://github.com/ROSSINHU/ai-agent-workbench/releases) page and double-click to run. It is a single portable file; `workbench2.cfg`, `workbench_settings.json`, and `logs/` are created next to the exe, so you can move the whole folder anywhere.
+
+**Option B — Run from source (developers)**
 
 1. **Clone**:
    ```bash
@@ -224,6 +240,8 @@ pip install pyinstaller psutil pystray Pillow
 pyinstaller AIWorkbench.spec --noconfirm --clean
 # output: dist/AIWorkbench.exe (~21 MB), double-click to run
 ```
+
+> The Python used to build must ship with **tkinter** (the official python.org installer includes it; some minimal/conda builds may lack it — run `conda install tk`). A package built without tkinter fails on launch.
 
 You can copy `AIWorkbench.exe` anywhere on its own; `workbench2.cfg`,
 `workbench_settings.json`, and `logs/` are created next to the exe.

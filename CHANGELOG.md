@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- PyInstaller build spec (`AIWorkbench.spec`) producing a portable, single-file, no-install `dist/AIWorkbench.exe` (~21 MB). Runtime config (`workbench2.cfg`, `workbench_settings.json`) and `logs/` resolve next to the exe, so it can be copied to any folder and run standalone.
+- Standalone-exe download/build instructions in the README.
+
+### Changed
+- Refactored the ~2,500-line `service_manager.py` monolith into a layered `workbench/` package with **zero behavior change**:
+  - `workbench/core.py` — headless logic: config persistence / process control / proxy / Node detection / logging / state (no Tkinter dependency).
+  - `workbench/platform_windows.py` — Windows-specific registry system-proxy reader.
+  - `workbench/app.py` — the Tkinter GUI (`WorkbenchApp` + `main`).
+  - `service_manager.py` is now a thin entry point (`from workbench.app import main`); the launcher `.bat` is unchanged.
+- Introduced an `APP_ROOT` anchor so config/log paths resolve correctly both when running from source and when frozen by PyInstaller.
+
+### Internal
+- CI now byte-compiles and AST-parses the entire `workbench/` package, not only the thin entry point.
+
 ## [1.0.0] - 2026-09-09
 
 ### Added

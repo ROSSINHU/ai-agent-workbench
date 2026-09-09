@@ -8,8 +8,14 @@ Thanks for your interest in making the workbench better!
 3. Make your changes.
 4. Test locally:
    ```bash
-   python -m py_compile service_manager.py   # syntax check
-   WORKBENCH_SMOKE=1 python service_manager.py   # headless smoke test
+   # syntax/byte-compile check for the entry point AND the whole package
+   python -m compileall -q service_manager.py workbench
+   # headless GUI smoke test (launches the UI and auto-closes after 1.5s)
+   WORKBENCH_SMOKE=1 python service_manager.py
+   ```
+   On Windows PowerShell, set the smoke flag inline with:
+   ```powershell
+   $env:WORKBENCH_SMOKE=1; python service_manager.py; Remove-Item Env:\WORKBENCH_SMOKE
    ```
 5. Commit with a clear message (see Commit messages below).
 6. Push and open a Pull Request against the `main` branch.
