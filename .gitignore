@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# User runtime configuration (NEVER commit — contains local paths and proxy state)
+workbench2.cfg
+workbench_settings.json
+
+# Logs
+logs/
+*.log
+
+# Debug / development scripts (not part of the release)
+_test_*.py
+_win32_debug.py
+_probe_*.py
+
+# Portable build artifacts
+*.zip
+service_workbench-portable-*/
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+.git-credentials
+*.pem
+*.key
+*.pfx
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db

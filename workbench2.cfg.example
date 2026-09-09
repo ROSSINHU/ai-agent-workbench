@@ -1,0 +1,39 @@
+# =============================================================
+#  Workbench 2.0 launcher configuration template
+# =============================================================
+# Rename this file to "workbench2.cfg" and fill in your actual
+# paths, OR simply run "AI agent管理工作台.bat" interactively
+# to auto-detect and generate the file for you.
+#
+# This example file is safe to commit. The real workbench2.cfg
+# is listed in .gitignore so your local paths are never uploaded.
+# =============================================================
+
+# Path to a Python interpreter that has tkinter installed.
+# - Required: Python 3.10+
+# - Use "py" to let the Windows Python launcher pick the default.
+PY_EXE=C:\Python310\pythonw.exe
+
+# Path to system npm.cmd (used for upgrading claude and codex).
+# Leave empty to force auto-detection (recommended).
+NODE_NPM=
+
+# -------------------------------------------------------------
+# Optional: fnm (Fast Node Manager) section
+# -------------------------------------------------------------
+# Set USE_FNM=1 if you want pi to be upgraded through fnm's
+# managed npm (the npm shipped with the fnm default alias).
+# Both paths are auto-detected by the launcher; manually fill
+# them in only if auto-detection fails on your machine.
+
+# fnm-managed npm.cmd (used for pi upgrades)
+FNM_NPM=C:\Users\YOURNAME\AppData\Roaming\fnm\aliases\default\npm.cmd
+
+# fnm executable
+FNM_EXE=C:\Users\YOURNAME\AppData\Local\Microsoft\WinGet\Packages\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe\fnm.exe
+
+USE_FNM=0
+
+# Working directory that managed services will be launched from.
+# Tip: keep this on a fast local drive (SSD recommended).
+WORKDIR=D:\AIWorkbench

@@ -1,0 +1,19 @@
+# =============================================================
+# AI Agent Workbench — Python dependencies
+# =============================================================
+# Python version requirement: 3.10+
+#
+# tkinter is bundled with the official python.org installer
+# on Windows. If you installed Python via a minimal distribution
+# (e.g. some conda variants), install it via the "tcl/tk and
+# IDLE" custom option in the installer, or via:
+#   - conda:  conda install tk
+#   - apt:    sudo apt-get install python3-tk
+# =============================================================
+
+# Optional: system resource monitor (CPU / RAM panel)
+psutil>=5.9
+
+# Optional: system tray icon (minimize to tray)
+pystray>=0.19
+Pillow>=10.0

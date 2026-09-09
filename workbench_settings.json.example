@@ -1,0 +1,16 @@
+{
+  "_comment": "Workbench runtime settings template. Rename to workbench_settings.json after customizing. The real file is in .gitignore so your local copy with real paths is never committed.",
+
+  "proxy_enabled": {
+    "claude": false,
+    "hermes": false,
+    "codex": false,
+    "pi": false
+  },
+  "_proxy_note": "Set any service to true to route its check/upgrade commands through the detected proxy. The workbench first tries WORKBENCH_PROXY env var, then HTTP(S)_PROXY env var, then Windows system proxy (registry / browser settings), then common local proxy ports.",
+
+  "hermes_branch": "main",
+  "_hermes_branch_note": "Hermes upstream has no separate 'stable' branch — 'main' is the official release line. Override here only if you track a custom branch.",
+
+  "workdir": "D:\\AIWorkbench"
+}
