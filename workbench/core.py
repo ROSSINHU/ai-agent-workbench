@@ -412,6 +412,112 @@ def to_exec(argv):
     return list(argv)
 
 
+# ---- 命令定位：优先用「升级该服务的那个 npm」的全局 bin 目录 ----
+# 背景（真实缺陷）：机器上同时存在系统 Node 全局目录（%APPDATA%\npm）与 fnm
+# 管理目录（fnm\aliases\default），两份各自独立的全局 node_modules。若升级用系统
+# npm（写入 %APPDATA%\npm），而版本探测/服务启动按 PATH 顺序先命中 fnm 目录里的
+# 旧 shim，就会出现"升级成功却仍读到旧版本、启动也是旧版本"的双 prefix 错配。
+_NPM_BIN_CACHE = {}  # npm.cmd 路径 -> 全局 bin 目录（None 表示解析失败）
+
+
+def npm_global_bin(npm_cmd):
+    """返回某 npm 对应的「全局可执行目录」（Windows 上 global bin == prefix 根目录）。
+
+    结果缓存（每个 npm 只解析一次）。解析顺序：
+      1. 实际执行 `npm prefix -g`（在含 APPDATA 的环境里，系统 npm 返回 %APPDATA%\\npm）；
+      2. 兜底：内置系统 Node 的 npm → %APPDATA%\\npm；fnm/便携 npm → npm.cmd 同目录。
+    """
+    if not npm_cmd:
+        return None
+    if npm_cmd in _NPM_BIN_CACHE:
+        return _NPM_BIN_CACHE[npm_cmd]
+    bin_dir = None
+    try:
+        r = subprocess.run(to_exec([npm_cmd, "prefix", "-g"]),
+                           capture_output=True, text=True, timeout=40,
+                           creationflags=NO_WINDOW,
+                           encoding="utf-8", errors="replace", env=npm_env())
+        line = (r.stdout or "").strip().splitlines()
+        cand = line[-1].strip() if line else ""
+        # 拒绝未展开的 ${APPDATA} 之类（极个别环境变量缺失时 npm 会原样回显）
+        if cand and os.path.isdir(cand) and "$" not in cand and "%" not in cand:
+            bin_dir = cand
+    except (OSError, subprocess.SubprocessError):
+        bin_dir = None
+    if bin_dir is None:  # 兜底
+        low = npm_cmd.lower()
+        candidates = []
+        appdata_npm = os.path.join(APPDATA, "npm") if APPDATA else ""
+        if appdata_npm:
+            candidates.append(appdata_npm)
+        # 不依赖 APPDATA 环境变量的稳健推导（个别宿主进程不注入 APPDATA）
+        roaming_npm = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "npm")
+        candidates.append(roaming_npm)
+        if "nodejs" in low:  # 内置系统 Node 的 npm：全局 bin 默认在 %APPDATA%\npm
+            for c in candidates:
+                if os.path.isdir(c):
+                    bin_dir = c
+                    break
+        if bin_dir is None:  # fnm / 便携 Node：npm.cmd 同目录即全局 bin
+            d = os.path.dirname(npm_cmd)
+            bin_dir = d if os.path.isdir(d) else None
+    _NPM_BIN_CACHE[npm_cmd] = bin_dir
+    return bin_dir
+
+
+def service_preferred_dirs(spec):
+    """该服务应优先查找命令的目录列表：来自其升级所用 npm 的全局 bin。
+
+    npm 类服务（有 upgrade_cmd）→ 升级它的 npm 装到哪，就优先从哪找；
+    hermes（git 自管理，无 upgrade npm）→ 空列表，回退 PATH / fnm。
+    """
+    up = spec.get("upgrade_cmd")
+    if isinstance(up, list) and up and os.path.isfile(up[0]):
+        b = npm_global_bin(up[0])
+        if b:
+            return [b]
+    return []
+
+
+def _which_exts(name):
+    exts = [e for e in os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if e]
+    return [name + e for e in exts] + [name + e.lower() for e in exts] + [name]
+
+
+def which_service(spec, name=None):
+    """定位某服务命令：升级来源 npm 全局 bin → PATH → fnm 目录。
+
+    与 which_anywhere 的区别：对 npm 类服务，先在「升级它的那个 npm」的全局
+    目录里找，保证升级写入位置与版本探测/启动读取位置始终是同一份安装。
+    """
+    name = name or spec["cmd"].split()[0]
+    for d in service_preferred_dirs(spec):
+        for n in _which_exts(name):
+            p = os.path.join(d, n)
+            if os.path.isfile(p):
+                return p
+    hit = which_anywhere(name)
+    return hit
+
+
+def resolve_service(spec, cmd_line=None):
+    """把某服务命令行解析为 Popen 参数；返回 (argv, exe_path) 或 (None, None)。
+
+    命令解析顺序与 which_service 一致（升级来源 bin 优先），避免启动旧 prefix。
+    """
+    cmd_line = cmd_line or spec["cmd"]
+    parts = cmd_line.split()
+    exe = which_service(spec, parts[0])
+    if exe is None:
+        return None, None
+    args = parts[1:]
+    if exe.lower().endswith((".cmd", ".bat")):
+        argv = ["cmd.exe", "/c", exe] + args
+    else:
+        argv = [exe] + args
+    return argv, exe
+
+
 def npm_env():
     """npm 操作专用环境：剥离 NODE_OPTIONS 注入（如 safe-delete 拦截器）。
 

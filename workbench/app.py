@@ -448,7 +448,7 @@ class WorkbenchApp:
             if not quiet:
                 self.log_msg(f"{name} 已在运行中（PID {st.pid}）", "info")
             return True
-        argv, exe = resolve_command(st.spec["cmd"])
+        argv, exe = resolve_service(st.spec)
         if argv is None:
             st.status = STATUS_MISSING
             self.refresh_all()
@@ -522,7 +522,7 @@ class WorkbenchApp:
     # ---------------- 版本检测与升级 ----------------
     def _fetch_current_version(self, st, mod=None):
         """获取当前版本；mod 非空时记录 DEBUG 级过程细节（命令、退出码、耗时、原始输出）。"""
-        exe = which_anywhere(st.spec["cmd"].split()[0])
+        exe = which_service(st.spec)
         if exe is None:
             if mod:
                 self.logger.debug(mod, "版本检测：命令未找到，跳过",
@@ -727,7 +727,7 @@ class WorkbenchApp:
         注意：退出码不可靠（成功检查固定为 0，失败为 1，
         但"已是最新"与"有更新"两种结果都是 0），必须解析输出文本。
         """
-        exe = which_anywhere(st.spec["cmd"].split()[0])
+        exe = which_service(st.spec)
         if exe is None:
             if mod:
                 self.logger.warn(mod, "更新状态检查：hermes 命令未找到，跳过")
@@ -836,7 +836,7 @@ class WorkbenchApp:
             return None
         # hermes：动态解析可执行文件后执行其 update 子命令；
         # --branch 固定更新通道（默认 main 稳定线，本地若在其他分支会自动切回）
-        exe = which_anywhere(st.spec["cmd"].split()[0])
+        exe = which_service(st.spec)
         if exe is None:
             return None
         return to_exec([exe, "update", "--branch", SETTINGS.hermes_branch])
@@ -988,7 +988,7 @@ class WorkbenchApp:
         # ---- 阶段 4/6：升级后完整性校验 ----
         t0 = time.time()
         log.info(mod, "阶段 4/6 完整性校验：命令可解析 + 新版本可读")
-        exe = which_anywhere(st.spec["cmd"].split()[0])
+        exe = which_service(st.spec)
         # 用退避重试读取，消化 Windows 大型原生二进制落位/杀软扫描延迟，
         # 避免 npm 已成功却在这一步读到旧版本（codex 约 300MB codex.exe 实测会命中）。
         # 仅 npm 包（有 latest_cmd）版本号会随安装推进，用 before 作门槛；
@@ -1540,7 +1540,7 @@ class WorkbenchApp:
 
         if st.spec.get("update_check"):
             # hermes：记录 git HEAD
-            exe = which_anywhere(st.spec["cmd"].split()[0])
+            exe = which_service(st.spec)
             if exe:
                 # 找到 hermes 安装目录下的 .git
                 hermes_dir = os.path.dirname(os.path.dirname(exe))  # 多级尝试
@@ -1623,7 +1623,7 @@ class WorkbenchApp:
                 return
             try:
                 # 找到 hermes 仓库目录
-                exe = which_anywhere(st.spec["cmd"].split()[0])
+                exe = which_service(st.spec)
                 hermes_dir = None
                 if exe:
                     try:
@@ -1762,7 +1762,7 @@ def main():
                 f"文件记录全量，可在日志区切换级别）", "info")
     missing = []
     for st in app.services.values():
-        if which_anywhere(st.spec["cmd"].split()[0]) is None:
+        if which_service(st.spec) is None:
             missing.append(st.spec["cmd"].split()[0])
     if missing:
         app.log_msg("提示：以下命令当前未在 PATH 中找到：" + "、".join(missing) +
