@@ -558,6 +558,51 @@ class WorkbenchApp:
                               output=(r.stdout or r.stderr or "").strip()[:120])
         return ver
 
+    def _fetch_version_settled(self, st, mod, expected_min=None,
+                               attempts=6, base_delay=0.6):
+        """升级后读取版本，对 Windows 上原生二进制落位/杀软扫描延迟做退避重试。
+
+        npm 打印 `changed N packages` 并以 exit 0 退出后，平台原生二进制
+        （如 codex 的约 300MB codex.exe）可能尚未完成改名/释放；紧接着执行
+        --version 仍可能命中旧文件，Defender 实时扫描会进一步放大这个时间窗。
+        表现为"升级命令成功、阶段 4 却读到旧版本"。
+
+        策略：
+        - 读到 None（命令暂不可解析）→ 重试；
+        - 给定 expected_min（升级前版本）时，只要读到的版本仍 <= 旧版本 → 重试，
+          直到版本推进或重试耗尽；版本一旦推进立即返回，不做无谓等待。
+        本方法只在升级后台线程调用，重试等待不阻塞界面。
+        """
+        last = None
+        for i in range(attempts):
+            v = self._fetch_current_version(st, mod)
+            last = v
+            settled = v is not None
+            if settled and expected_min is not None:
+                try:
+                    if ver_tuple(v) <= ver_tuple(expected_min):
+                        settled = False
+                except Exception:
+                    settled = True  # 版本无法比较时不卡住流程
+            if settled:
+                if i > 0:
+                    self.logger.info(mod, f"升级后版本在第 {i + 1} 次读取时稳定为 {v}",
+                                     attempts=i + 1)
+                return v
+            if i < attempts - 1:
+                delay = min(base_delay * (i + 1), 2.5)  # 0.6,1.2,1.8,2.4,2.5 线性退避封顶
+                self.logger.debug(mod, "升级后版本尚未就绪，稍后重试",
+                                  read=v or "未解析", expected_min=expected_min or "-",
+                                  retry=f"{i + 1}/{attempts}", wait_s=round(delay, 1))
+                time.sleep(delay)
+        if last is not None and expected_min is not None:
+            self.logger.warn(mod, "升级后多次读取，版本仍未推进显示",
+                             read=last, expected_min=expected_min,
+                             suggestion="安装命令已成功（exit 0），多为大型原生二进制"
+                                        "落位/杀软扫描延迟；数秒后点「检查更新」或"
+                                        "重启工作台即可显示新版本")
+        return last
+
     def _fetch_latest_version(self, st, mod=None):
         """查询 npm 最新版本；mod 非空时记录 DEBUG 级过程细节。"""
         cmd = st.spec["latest_cmd"]
@@ -944,7 +989,13 @@ class WorkbenchApp:
         t0 = time.time()
         log.info(mod, "阶段 4/6 完整性校验：命令可解析 + 新版本可读")
         exe = which_anywhere(st.spec["cmd"].split()[0])
-        after = self._fetch_current_version(st, mod)
+        # 用退避重试读取，消化 Windows 大型原生二进制落位/杀软扫描延迟，
+        # 避免 npm 已成功却在这一步读到旧版本（codex 约 300MB codex.exe 实测会命中）。
+        # 仅 npm 包（有 latest_cmd）版本号会随安装推进，用 before 作门槛；
+        # hermes 为 git 自管理（update_check），更新常只前进提交数而 tag 不变，
+        # 不能要求版本号推进，只等待命令可读即可。
+        expect_min = before if st.spec.get("latest_cmd") else None
+        after = self._fetch_version_settled(st, mod, expected_min=expect_min)
         broken = False
         if exe is None:
             log.error(mod, "阶段 4/6 完整性校验失败：升级后命令无法解析（启动脚本疑似丢失）",
@@ -958,6 +1009,13 @@ class WorkbenchApp:
             if after is None:
                 log.warn(mod, "命令存在但版本读取失败，安装可能不完整", exe=exe,
                          suggestion="建议手动执行 --version 确认；若异常则按安装损坏流程重装")
+            elif before and ver_tuple(after) <= ver_tuple(before):
+                # 命令可读但版本未推进：不判损坏（npm exit 0 即安装成功），只如实提示
+                log.warn(mod, "升级后版本号仍显示为旧值（安装命令已成功退出）",
+                         before=before, after=after, elapsed=dur(t0),
+                         suggestion="通常是大型原生二进制落位或杀软实时扫描延迟："
+                                    "稍等数秒后点「检查更新」，或重启工作台即会显示新版本；"
+                                    "若长时间不变，按安装损坏流程在终端干净重装")
             else:
                 log.debug(mod, "新版本读取成功", version=after)
         log.info(mod, "阶段 4/6 完成", integrity="损坏" if broken else "正常",

@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `service_manager.py` is now a thin entry point (`from workbench.app import main`); the launcher `.bat` is unchanged.
 - Introduced an `APP_ROOT` anchor so config/log paths resolve correctly both when running from source and when frozen by PyInstaller.
 
+### Fixed
+- Post-upgrade version check no longer reports the old version after a successful `npm install -g ...@latest`. On Windows, npm can exit 0 while a large native binary (e.g. codex's ~300 MB `codex.exe`) is still being moved/scanned by Defender, so the immediate `--version` read occasionally hit the stale binary. Stage 4 now retries with capped linear backoff until the version advances (npm packages) or becomes readable (git-based hermes), and warns clearly instead of silently showing the old version.
+
 ### Internal
 - CI now byte-compiles and AST-parses the entire `workbench/` package, not only the thin entry point.
 
